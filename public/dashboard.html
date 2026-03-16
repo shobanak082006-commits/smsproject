@@ -1,1 +1,312 @@
+<!DOCTYPE html>
+<html>
 
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Admin Dashboard</title>
+
+<style>
+
+*{
+box-sizing:border-box;
+}
+
+body{
+font-family:Arial, sans-serif;
+margin:0;
+background:linear-gradient(135deg,#1d3557,#457b9d);
+}
+
+/* HEADER */
+
+header{
+background:#002147;
+color:white;
+padding:20px;
+text-align:center;
+position:relative;
+}
+
+header h1{
+margin:0;
+font-size:30px;
+}
+
+header p{
+margin:5px;
+font-size:16px;
+}
+
+.logout{
+position:absolute;
+right:20px;
+top:20px;
+background:#e63946;
+border:none;
+padding:8px 14px;
+color:white;
+border-radius:6px;
+cursor:pointer;
+}
+
+/* CONTAINER */
+
+.container{
+width:80%;
+margin:auto;
+margin-top:30px;
+}
+
+/* CARD */
+
+.card{
+background:white;
+padding:20px;
+border-radius:12px;
+box-shadow:0 6px 18px rgba(0,0,0,0.25);
+margin-bottom:25px;
+}
+
+h2{
+margin-top:0;
+}
+
+/* INPUT */
+
+input{
+width:100%;
+padding:10px;
+margin-bottom:12px;
+border-radius:6px;
+border:1px solid #ccc;
+}
+
+/* BUTTON */
+
+button{
+padding:8px 15px;
+border:none;
+border-radius:6px;
+cursor:pointer;
+color:white;
+}
+
+.search-btn{ background:#0077b6; }
+.delete-btn{ background:#e63946; }
+.edit-btn{ background:#ff9f1c; }
+
+.add-link{
+color:#0077ff;
+font-weight:bold;
+text-decoration:none;
+}
+
+.add-link:hover{
+text-decoration:underline;
+}
+
+/* STUDENT CARD */
+
+.student-card{
+text-align:center;
+margin-bottom:15px;
+}
+
+.student-photo{
+width:140px;
+height:140px;
+border-radius:10px;
+object-fit:cover;
+border:3px solid #457b9d;
+}
+
+/* DETAILS GRID */
+
+.grid{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:12px;
+}
+
+.grid div{
+background:#f5f5f5;
+padding:8px;
+border-radius:6px;
+}
+
+.grid span{
+font-weight:bold;
+color:#1d3557;
+}
+
+
+/* 📱 MOBILE RESPONSIVE */
+
+@media(max-width:768px){
+
+header h1{
+font-size:22px;
+}
+
+header p{
+font-size:14px;
+}
+
+.logout{
+position:static;
+margin-top:10px;
+}
+
+.container{
+width:95%;
+}
+
+.grid{
+grid-template-columns:1fr;
+}
+
+.student-photo{
+width:110px;
+height:110px;
+}
+
+button{
+width:100%;
+margin-top:8px;
+}
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+
+<h1>S. Vellaichamy Nadar College</h1>
+<p>Admin Based Student Management System - Dashboard</p>
+
+<button class="logout" onclick="logout()">Logout</button>
+
+</header>
+
+<div class="container">
+
+<div class="card">
+
+<h2>Search Student</h2>
+
+<form onsubmit="searchStudent(event)">
+<input type="text" id="searchRegNo" placeholder="Enter Register Number" required>
+<button type="submit" class="search-btn">Search</button>
+</form>
+
+<br>
+
+<a href="/add-student.html" class="add-link">+ Add Student</a>
+
+</div>
+
+<div class="card" id="detailsSection" style="display:none;">
+
+<h2>Student Details</h2>
+
+<div id="result"></div>
+
+</div>
+
+</div>
+
+<script>
+
+async function searchStudent(event){
+
+event.preventDefault();
+
+const regNo=document.getElementById("searchRegNo").value.trim();
+
+const response=await fetch("/student/"+regNo);
+
+const data=await response.json();
+
+const detailsSection=document.getElementById("detailsSection");
+const resultDiv=document.getElementById("result");
+
+detailsSection.style.display="block";
+
+if(data.message==="Not Found"){
+
+resultDiv.innerHTML="<p style='color:red;'>Student Not Found</p>";
+return;
+
+}
+
+resultDiv.innerHTML=`
+
+<div class="student-card">
+
+${data.photo ? `<img src="/uploads/${data.photo}" class="student-photo">` : ""}
+
+</div>
+
+<div class="grid">
+
+<div><span>Name:</span> ${data.name}</div>
+<div><span>Register No:</span> ${data.registerNo}</div>
+<div><span>Phone:</span> ${data.phone}</div>
+<div><span>Parent Phone:</span> ${data.parentPhone}</div>
+<div><span>Father:</span> ${data.fatherName}</div>
+<div><span>Mother:</span> ${data.motherName}</div>
+<div><span>DOB:</span> ${data.dob}</div>
+<div><span>Blood Group:</span> ${data.bloodGroup}</div>
+<div><span>Caste:</span> ${data.caste}</div>
+<div><span>Religion:</span> ${data.religion}</div>
+<div><span>Attendance %:</span> ${data.attendancePercentage}</div>
+<div><span>Semester %:</span> ${data.semesterPercentage}</div>
+<div style="grid-column:1/3"><span>Address:</span> ${data.address}</div>
+
+</div>
+
+<br>
+
+<button class="delete-btn" onclick="deleteStudent('${data.registerNo}')">Delete</button>
+
+<a href="/edit-student/${data.registerNo}">
+<button class="edit-btn">Edit</button>
+</a>
+
+`;
+
+}
+
+async function deleteStudent(regNo){
+
+if(!confirm("Are you sure to delete?")) return;
+
+const response=await fetch("/delete-student/"+regNo,{
+method:"DELETE"
+});
+
+const data=await response.json();
+
+alert(data.message);
+
+document.getElementById("detailsSection").style.display="none";
+
+}
+
+function logout(){
+
+window.location.href="/login.html";
+
+}
+
+</script>
+
+</body>
+</html>
