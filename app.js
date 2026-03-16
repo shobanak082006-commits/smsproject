@@ -37,7 +37,7 @@ app.get("/", (req, res) => {
    (Cloud-ready)
 =========================== */
 
-mongoose.connect("mongodb://127.0.0.1:27017/studentDB")
+mongoose.connect("mongodb://mongo:rWoPInOWQBqGDMPIeJWmAnwbUjGrHDXz@caboose.proxy.rlwy.net:25417/studentDB")
   .then(() => console.log("MongoDB Connected"))
   .catch(err => console.log("DB Error:", err));
 
