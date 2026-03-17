@@ -10,7 +10,6 @@ const app = express();
 /* ===========================
    MIDDLEWARE
 =========================== */
-
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cors());
@@ -27,24 +26,20 @@ app.use("/uploads", express.static("uploads"));
 /* ===========================
    ROOT PAGE
 =========================== */
-
 app.get("/", (req, res) => {
   res.sendFile(__dirname + "/public/login.html");
 });
 
 /* ===========================
    MONGODB CONNECTION
-   (Cloud-ready)
 =========================== */
-
-mongoose.connect("mongodb://mongo:rWoPInOWQBqGDMPIeJWmAnwbUjGrHDXz@caboose.proxy.rlwy.net:25417/studentDB")
+mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB Connected"))
   .catch(err => console.log("DB Error:", err));
 
 /* ===========================
    STUDENT SCHEMA
 =========================== */
-
 const studentSchema = new mongoose.Schema({
   name: String,
   registerNo: { type: String, unique: true, trim: true },
@@ -62,19 +57,17 @@ const studentSchema = new mongoose.Schema({
   photo: String
 });
 
+// Ensure unique index on registerNo
+studentSchema.index({ registerNo: 1 }, { unique: true });
+
 const Student = mongoose.model("Student", studentSchema);
 
 /* ===========================
    MULTER SETUP
 =========================== */
-
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads");
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
-  }
+  destination: (req, file, cb) => cb(null, "uploads"),
+  filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
 });
 
 const upload = multer({ storage });
@@ -82,41 +75,32 @@ const upload = multer({ storage });
 /* ===========================
    LOGIN
 =========================== */
-
 app.post("/login", (req, res) => {
-
   const phone = req.body.phone?.trim();
   const password = req.body.password?.trim();
 
   if (phone === "9876543210" && password === "admin@123") {
-
     req.session.admin = true;
     res.redirect("/dashboard");
-
   } else {
     res.send("Invalid Login");
   }
-
 });
 
 /* ===========================
    DASHBOARD
 =========================== */
-
 app.get("/dashboard", (req, res) => {
-
   if (req.session.admin) {
     res.sendFile(__dirname + "/public/dashboard.html");
   } else {
     res.redirect("/login.html");
   }
-
 });
 
 /* ===========================
    LOGOUT
 =========================== */
-
 app.get("/logout", (req, res) => {
   req.session.destroy(() => {
     res.redirect("/login.html");
@@ -126,15 +110,20 @@ app.get("/logout", (req, res) => {
 /* ===========================
    ADD STUDENT
 =========================== */
-
 app.post("/add-student", upload.single("photo"), async (req, res) => {
-
   try {
     const photoName = req.file ? req.file.filename : "";
+    const registerNo = req.body.registerNo?.trim();
+
+    // Duplicate check before save
+    const existingStudent = await Student.findOne({ registerNo });
+    if (existingStudent) {
+      return res.send("Register Number Already Exists");
+    }
 
     const newStudent = new Student({
       name: req.body.name,
-      registerNo: req.body.registerNo?.trim(),
+      registerNo,
       phone: req.body.phone,
       address: req.body.address,
       dob: req.body.dob,
@@ -154,59 +143,53 @@ app.post("/add-student", upload.single("photo"), async (req, res) => {
 
   } catch (error) {
     console.log("Add Error:", error);
-    res.send("Register Number Already Exists");
+    if (error.code === 11000) {
+      // Duplicate key error from MongoDB
+      res.send("Register Number Already Exists");
+    } else {
+      res.send("Some Error Occurred");
+    }
   }
-
 });
 
 /* ===========================
    SEARCH STUDENT
 =========================== */
-
 app.get("/student/:regNo", async (req, res) => {
-
   try {
     const regNo = req.params.regNo.trim();
     const student = await Student.findOne({ registerNo: regNo });
 
     if (!student) return res.json({ message: "Not Found" });
-
     res.json(student);
 
   } catch (error) {
     console.log("Search Error:", error);
     res.json({ message: "Error Occurred" });
   }
-
 });
 
 /* ===========================
    DELETE STUDENT
 =========================== */
-
 app.delete("/delete-student/:regNo", async (req, res) => {
-
   try {
     const regNo = req.params.regNo.trim();
     const deleted = await Student.findOneAndDelete({ registerNo: regNo });
 
     if (!deleted) return res.json({ message: "Student Not Found" });
-
     res.json({ message: "Deleted Successfully" });
 
   } catch (error) {
     console.log("Delete Error:", error);
     res.json({ message: "Error Occurred" });
   }
-
 });
 
 /* ===========================
-   SERVER START (Cloud-ready)
+   SERVER START
 =========================== */
-
 const PORT = process.env.PORT || 5000;
-
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
